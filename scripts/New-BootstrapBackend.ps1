@@ -72,7 +72,19 @@ Set-AzStorageAccount `
     -Name $StorageAccountName `
     -SkuName Standard_GRS `
     -AllowSharedKeyAccess $false
-    
+
+# ==========================================================
+# Enable Container Soft Delete
+# ==========================================================
+
+Write-Host "Enabling container soft delete..."
+
+Enable-AzStorageContainerDeleteRetentionPolicy `
+    -ResourceGroupName $ResourceGroupName `
+    -StorageAccountName $StorageAccountName `
+    -RetentionDays 7
+
+
 # ----------------------------------------------------------
 # Blob container
 #
@@ -195,6 +207,41 @@ foreach ($principalId in @(
             -Scope $containerResourceId `
             -RoleDefinitionName $roleName
     }
+}
+
+# ==========================================================
+# Apply ARM CanNotDelete Lock
+# ==========================================================
+
+$lockName = "lock-$StorageAccountName-delete"
+
+Write-Host "Checking ARM delete lock '$lockName'..."
+
+$existingLock = Get-AzResourceLock `
+    -ResourceGroupName $ResourceGroupName `
+    -ResourceName $StorageAccountName `
+    -ResourceType "Microsoft.Storage/storageAccounts" `
+    -ErrorAction SilentlyContinue |
+    Where-Object {
+        $_.Name -eq $lockName
+    }
+
+if (-not $existingLock) {
+
+    Write-Host "Creating CanNotDelete lock on storage account..."
+
+    New-AzResourceLock `
+        -LockName $lockName `
+        -LockLevel CanNotDelete `
+        -ResourceGroupName $ResourceGroupName `
+        -ResourceName $StorageAccountName `
+        -ResourceType "Microsoft.Storage/storageAccounts" `
+        -Force | Out-Null
+
+    Write-Host "Storage account delete lock created."
+}
+else {
+    Write-Host "Storage account delete lock already exists."
 }
 
 Write-Host ""
