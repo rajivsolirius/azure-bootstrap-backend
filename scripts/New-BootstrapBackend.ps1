@@ -59,13 +59,20 @@ if (-not $storage) {
         -ResourceGroupName $ResourceGroupName `
         -Name $StorageAccountName `
         -Location $Location `
-        -SkuName Standard_LRS `
+        -SkuName Standard_GRS `
         -Kind StorageV2 `
         -MinimumTlsVersion TLS1_2 `
         -AllowBlobPublicAccess $false `
+        -AllowSharedKeyAccess $false `
         -PublicNetworkAccess Disabled
 }
 
+Set-AzStorageAccount `
+    -ResourceGroupName $ResourceGroupName `
+    -Name $StorageAccountName `
+    -SkuName Standard_GRS `
+    -AllowSharedKeyAccess $false
+    
 # ----------------------------------------------------------
 # Blob container
 #
